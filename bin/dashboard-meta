@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""Collect per-service names and descriptions for the homelab dashboard.
+
+The dashboard fetches /data/meta.json and uses it to (a) show a real
+description under each tile and (b) map a Traefik hostname to the Docker
+container whose health drives the status dot.
+
+Runs HOST-SIDE, from the repo root:
+
+    bin/dashboard-meta
+
+It reads container labels via the local Docker socket (the dashboard container
+deliberately has none) and writes:
+
+    { "<host>": { "name": "<container>", "desc": "<description>" } }
+
+Hostnames come from each container's own Traefik router labels, so the output
+tracks whatever Traefik actually routes. Descriptions come from, in order:
+
+    dashboard.desc                          (explicit, per-container override)
+    org.opencontainers.image.description    (inherited from the image)
+
+Neither is required — a container with no description still contributes its
+name, which is what the status dot needs.
+
+## Why the router NAME matters
+
+Containers sharing another container's network namespace cannot carry their own
+Traefik labels, so the labels live on the network owner. qBittorrent and
+Prowlarr ride the gluetun VPN container, so gluetun holds:
+
+    traefik.http.routers.qbittorrent.rule = Host(`qbit.example.com`)
+    traefik.http.routers.prowlarr.rule    = Host(`prowlarr.example.com`)
+
+Mapping the host to the labelled container would call both "gluetun" and point
+the status dot at the VPN sidecar. So when a router's NAME matches a real
+container, that container wins. This is what NAME_OVERRIDE in index.html was
+hand-patching around.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+# docker-compose.yml mounts ../../state/dashboard at /usr/share/nginx/html/data,
+# so meta.json must land there to be served at /data/meta.json.
+DEFAULT_OUT = (REPO_ROOT / ".." / ".." / "state" / "dashboard" / "meta.json").resolve()
+
+ROUTER_RULE = re.compile(r"^traefik\.http\.routers\.([^.]+)\.rule$")
+HOST_RULE = re.compile(r"Host\(`([^`]+)`\)")
+
+DESC_LABELS = ("dashboard.desc", "org.opencontainers.image.description")
+
+
+def docker_inspect_all(docker_bin: str) -> list[dict]:
+    """Every container (running or not) with its labels, in one call."""
+    try:
+        names = subprocess.run(
+            [docker_bin, "ps", "-a", "--format", "{{.Names}}"],
+            capture_output=True, text=True, check=True,
+        ).stdout.split()
+    except FileNotFoundError:
+        print(f"{docker_bin}: not found — this must run on the Docker host", file=sys.stderr)
+        raise SystemExit(2)
+    except subprocess.CalledProcessError as exc:
+        print(f"docker ps failed: {exc.stderr.strip() or exc}", file=sys.stderr)
+        raise SystemExit(2)
+
+    if not names:
+        return []
+
+    result = subprocess.run(
+        [docker_bin, "inspect", *names], capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0 and not result.stdout.strip():
+        print(f"docker inspect failed: {result.stderr.strip()}", file=sys.stderr)
+        raise SystemExit(2)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        print(f"could not parse docker inspect output: {exc}", file=sys.stderr)
+        raise SystemExit(2)
+
+
+def describe(labels: dict[str, str]) -> str:
+    for key in DESC_LABELS:
+        value = (labels.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def collect(containers: list[dict]) -> tuple[dict[str, dict[str, str]], list[str]]:
+    """Map host -> {name, desc}. Also returns notes about resolution choices."""
+    by_name = {}
+    for container in containers:
+        name = (container.get("Name") or "").lstrip("/")
+        if name:
+            by_name[name] = container
+
+    meta: dict[str, dict[str, str]] = {}
+    notes: list[str] = []
+
+    for container in containers:
+        owner = (container.get("Name") or "").lstrip("/")
+        labels = (container.get("Config") or {}).get("Labels") or {}
+
+        for key, value in labels.items():
+            router = ROUTER_RULE.match(key)
+            if not router:
+                continue
+            router_name = router.group(1)
+
+            # A router named after a real container belongs to THAT container,
+            # even when the labels sit on the one owning the network namespace.
+            target = by_name.get(router_name, container)
+            target_name = (target.get("Name") or "").lstrip("/")
+            if target_name != owner:
+                notes.append(f"{router_name}: labels on {owner} -> resolved to {target_name}")
+
+            # Only the resolved container's OWN labels describe it. Falling back
+            # to the label owner's would make qBittorrent claim gluetun's
+            # description; better to have none and let META supply it.
+            desc = describe((target.get("Config") or {}).get("Labels") or {})
+
+            for host in HOST_RULE.findall(value):
+                entry = {"name": target_name}
+                if desc:
+                    entry["desc"] = desc
+                # First writer wins, except that a self-owned router always
+                # beats one inherited from a namespace owner.
+                if host not in meta or target_name == router_name:
+                    meta[host] = entry
+
+    return dict(sorted(meta.items())), notes
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Collect dashboard service metadata from Docker labels.")
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"output file (default: {DEFAULT_OUT})")
+    parser.add_argument("--docker", default="docker", help="docker binary to use (default: docker)")
+    parser.add_argument("--dry-run", action="store_true", help="print the JSON instead of writing it")
+    args = parser.parse_args()
+
+    containers = docker_inspect_all(args.docker)
+    meta, notes = collect(containers)
+    payload = json.dumps(meta, indent=2, sort_keys=True) + "\n"
+
+    if args.dry_run:
+        print(payload, end="")
+    else:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        # Write-then-replace so nginx never serves a half-written file.
+        tmp = args.out.with_suffix(args.out.suffix + ".tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, args.out)
+
+    with_desc = sum(1 for entry in meta.values() if entry.get("desc"))
+    for note in sorted(set(notes)):
+        print(f"~ {note}")
+    target = "(dry run)" if args.dry_run else str(args.out)
+    print(f"{len(meta)} hosts ({with_desc} with descriptions) from "
+          f"{len(containers)} containers -> {target}")
+    if not meta:
+        print("No Traefik router labels found. If services are routed by "
+              "Traefik's file provider they have no container to read.", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

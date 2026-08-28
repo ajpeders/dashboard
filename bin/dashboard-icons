@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Fetch service icons for the homelab dashboard.
+
+The dashboard serves icons from /data/icons/<name>.png. docker-compose.yml
+mounts this repo's data/icons folder there, so this script is intended to be
+run from the repo root on the host:
+
+    bin/dashboard-icons
+
+It reads the icon names already curated in index.html and downloads matching
+PNGs from homarr-labs/dashboard-icons into data/icons. Missing icons are
+reported but are not fatal because the UI has built-in SVG fallbacks.
+"""
+
+from __future__ import annotations
+
+import argparse
+import concurrent.futures
+import re
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+INDEX = REPO_ROOT / "index.html"
+DEFAULT_OUT = REPO_ROOT / "data/icons"
+BASE_URL = "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/png"
+
+# Some local names are friendlier than upstream filenames.
+ALIASES = {
+    "actual-budget": ["actual-budget", "actual"],
+    "adguard-home": ["adguard-home", "adguard"],
+    "changedetection": ["changedetection", "changedetection-io"],
+    "debian": ["debian-linux", "debian"],
+    "discord": ["discord", "discord-bot"],
+    "macos": ["macos", "apple"],
+    "matrix": ["matrix", "element", "cinny"],
+    "music-assistant": ["music-assistant"],
+    "musicseerr": ["musicseerr", "music-assistant"],
+    "ollama": ["ollama", "open-webui"],
+    "owncast": ["owncast"],
+    "paperless-ngx": ["paperless-ngx", "paperless"],
+    "qbittorrent": ["qbittorrent"],
+    "searxng": ["searxng", "searx"],
+    "windows-11": ["windows-11", "windows"],
+}
+
+
+def icon_names(index_path: Path) -> list[str]:
+    html = index_path.read_text(encoding="utf-8")
+    names = set(re.findall(r'icon:\s*"([^"]+)"', html))
+    return sorted(names)
+
+
+def candidates(name: str) -> list[str]:
+    seen: list[str] = []
+    for candidate in ALIASES.get(name, [name]):
+        if candidate not in seen:
+            seen.append(candidate)
+    return seen
+
+
+def fetch_one(name: str, out_dir: Path, force: bool, timeout: float) -> tuple[str, str, str]:
+    target = out_dir / f"{name}.png"
+    if target.exists() and not force:
+        return name, "cached", target.name
+
+    last_error = ""
+    for candidate in candidates(name):
+        url = f"{BASE_URL}/{candidate}.png"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "homelab-dashboard-icons/1.0"})
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                ctype = response.headers.get("Content-Type", "")
+                data = response.read()
+            if not data or "png" not in ctype.lower():
+                last_error = f"{candidate}: unexpected content-type {ctype or 'unknown'}"
+                continue
+            target.write_bytes(data)
+            return name, "downloaded", f"{candidate}.png"
+        except urllib.error.HTTPError as exc:
+            last_error = f"{candidate}: HTTP {exc.code}"
+        except OSError as exc:
+            last_error = f"{candidate}: {exc}"
+    return name, "missing", last_error
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Download dashboard service icons.")
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"output directory (default: {DEFAULT_OUT})")
+    parser.add_argument("--force", action="store_true", help="redownload icons that already exist")
+    parser.add_argument("--timeout", type=float, default=12.0, help="per-icon network timeout in seconds")
+    args = parser.parse_args()
+
+    if not INDEX.exists():
+        print(f"index.html not found at {INDEX}", file=sys.stderr)
+        return 2
+
+    names = icon_names(INDEX)
+    args.out.mkdir(parents=True, exist_ok=True)
+
+    results: list[tuple[str, str, str]] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [pool.submit(fetch_one, name, args.out, args.force, args.timeout) for name in names]
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
+
+    results.sort()
+    for name, status, detail in results:
+        marker = {"downloaded": "+", "cached": "=", "missing": "!"}[status]
+        print(f"{marker} {name:<18} {status:<10} {detail}")
+
+    downloaded = sum(1 for _, status, _ in results if status == "downloaded")
+    cached = sum(1 for _, status, _ in results if status == "cached")
+    missing = [name for name, status, _ in results if status == "missing"]
+    print(f"\n{downloaded} downloaded, {cached} cached, {len(missing)} missing -> {args.out}")
+    if missing:
+        print("Missing icons will use the dashboard's built-in SVG fallback:", ", ".join(missing))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

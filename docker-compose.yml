@@ -1,0 +1,74 @@
+services:
+  dashboard:
+    container_name: dashboard
+    image: nginx:1.31-alpine
+    restart: unless-stopped
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./dashboard-v2.css:/usr/share/nginx/html/dashboard-v2.css:ro
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+      # Per-service descriptions collected from container/image labels by
+      # `bin/dashboard-meta` (host-side, no docker socket in this container).
+      # Served same-origin at /data/meta.json. Repo icons are mounted below so
+      # the dashboard still has a complete icon pack if the state dir lacks one.
+      - ../../state/dashboard:/usr/share/nginx/html/data:ro
+      - ./data/icons:/usr/share/nginx/html/data/icons:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.dashboard.rule=Host(`${DASHBOARD_DOMAIN}`)
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls=true
+      - traefik.http.routers.dashboard.tls.certresolver=letsencrypt
+      - traefik.http.routers.dashboard.middlewares=local-only@file
+      - traefik.http.services.dashboard.loadbalancer.server.port=80
+    networks:
+      - web                 # Traefik reaches the UI here
+      - dashboard-internal  # ...and nginx reaches the power sidecar here
+
+  # Privileged sidecar: the ONLY thing that can start/stop containers for the
+  # dashboard's on-demand toggles, and the source for the /status/ health dots.
+  # No Traefik route — reached only via the dashboard's nginx proxy (/power/,
+  # /status/), which is itself behind local-only@file. Hardened: read-only rootfs,
+  # all caps dropped, no-new-privileges. It mounts docker.sock (host-root
+  # surface), so the code is deliberately tiny + allowlist-gated; if you want to
+  # shrink the surface further, put a tecnativa/docker-socket-proxy in front.
+  #
+  # DELIBERATELY NOT ON `web` (2026-08-03). The app has no authentication of any
+  # kind — local-only@file protects the *browser* path, not container-to-container
+  # traffic, so while this sat on the shared `web` net any one of ~51 containers
+  # could `POST /power/<name>/stop` with no credential. It needs to reach nothing
+  # but docker.sock, and nothing but the dashboard's nginx needs to reach it, so
+  # a private network closes the hole outright rather than bolting on a token.
+  # If you ever add a second legitimate caller (e.g. a Discord bot), attach that
+  # caller to `dashboard-internal` — do NOT put this service back on `web`.
+  dashboard-power:
+    container_name: dashboard-power
+    build: ./power
+    restart: unless-stopped
+    read_only: true
+    # read_only rootfs needs a writable /tmp for gunicorn's worker temp files.
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      # Only these containers can be toggled. '*' is a fnmatch wildcard.
+      POWER_ALLOWLIST: "minecraft,plan-minecraft,minecraft-backup,sons-of-the-forest,palworld,portainer,vm-debian,vm-windows,vm-macos"
+      POWER_STOP_TIMEOUT: "20"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - dashboard-internal
+
+networks:
+  web:
+    external: true
+    name: web
+  # `internal: true` also cuts outbound egress — the sidecar talks to docker.sock
+  # and nothing else, so it has no business reaching the LAN or the internet.
+  # (Image builds are unaffected; build-time networking is separate.)
+  dashboard-internal:
+    internal: true

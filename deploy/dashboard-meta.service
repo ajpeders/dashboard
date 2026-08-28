@@ -1,0 +1,17 @@
+[Unit]
+Description=Collect homelab dashboard service metadata from Docker labels
+Documentation=https://github.com/ajpeders/dashboard
+# The collector shells out to `docker`, so the daemon has to be up first.
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# EDIT THIS to wherever the repo is checked out on the host.
+WorkingDirectory=/srv/homelab/dashboard
+ExecStart=/srv/homelab/dashboard/bin/dashboard-meta
+# Needs Docker socket access; run as a user in the `docker` group, or as root.
+User=root
+# meta.json is written write-then-rename, so a failed run leaves the previous
+# file intact and the dashboard keeps serving the last good metadata.
+Nice=10

@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>homelab</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏠%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #101114;
+    --bg-soft: #16181d;
+    --bg-card: #1b1e24;
+    --bg-card-hover: #242832;
+    --bg-icon: #111318;
+    --border: #2d323b;
+    --border-strong: #444b57;
+    --text: #f0f2f5;
+    --text-dim: #a5abb6;
+    --text-muted: #737b88;
+    --accent: #8ab4f8;
+    --accent-strong: #f2c36b;
+    --accent-glow: rgba(138, 180, 248, 0.16);
+    --new: #f5c451;
+    --new-glow: rgba(245, 196, 81, 0.16);
+    --ok: #46d36f;
+    --bad: #ff6464;
+    --warn: #f2c94c;
+    --surface-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+    --tile-size: 128px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 26px 24px 64px;
+  }
+  header {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(280px, 520px) auto;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .brand {
+    min-width: 0;
+  }
+  h1 {
+    font-size: 25px;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.1;
+  }
+  h1 .dim { color: var(--text-dim); font-weight: 400; }
+  .tagline {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  .search-wrap {
+    position: relative;
+    min-width: 0;
+  }
+  #search {
+    width: 100%;
+    background: #181b21;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 14px;
+    padding: 11px 14px 11px 38px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  #search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .search-wrap::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8f99' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .kbd {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font: 11px ui-monospace, monospace;
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .icon-btn,
+  #edit {
+    background: #181b21;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    font-size: 17px;
+  }
+  .icon-btn:hover,
+  #edit:hover { border-color: var(--accent); color: var(--text); }
+  .icon-btn:disabled {
+    opacity: 0.55;
+    cursor: wait;
+  }
+  .topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin: 0 0 28px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .overview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .metric {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+  .metric + .metric::before {
+    content: "";
+    width: 1px;
+    height: 18px;
+    margin-right: 2px;
+    background: var(--border);
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .overview,
+  .toolbar {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+  .metric .value {
+    display: inline;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .metric .label {
+    display: inline;
+    margin-top: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    border: 1px solid var(--border);
+    background: #12161b;
+    color: var(--text-dim);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(138, 180, 248, 0.12);
+  }
+  .filter-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .filter-dot.up { background: var(--ok); }
+  .filter-dot.down { background: var(--bad); }
+  .filter-dot.checking { background: var(--warn); }
+  /* ---- group editor modal ---- */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 16px;
+    overflow: auto;
+    z-index: 50;
+  }
+  .modal.hidden { display: none; }
+  .modal .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 660px;
+    padding: 22px 24px 24px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  }
+  .modal h3 { font-size: 16px; font-weight: 600; }
+  .modal .sub { color: var(--text-dim); font-size: 12px; margin: 4px 0 4px; }
+  .ed-section-title {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-dim); margin: 20px 0 10px;
+  }
+  .ed-group { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .ed-group input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 10px; font-size: 14px; outline: none;
+    min-width: 0;
+  }
+  .ed-group input:focus { border-color: var(--accent); }
+  .ed-btn {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 8px; padding: 8px 11px; cursor: pointer; font-size: 13px; line-height: 1;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .ed-btn:hover { border-color: var(--accent); color: var(--text); }
+  .ed-btn.active {
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(110, 168, 254, 0.1);
+  }
+  .ed-tools {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    margin: 0 0 10px;
+  }
+  .ed-search {
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    outline: none;
+  }
+  .ed-search:focus { border-color: var(--accent); }
+  .ed-filters,
+  .ed-bulk {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .ed-bulk {
+    grid-column: 1 / -1;
+    padding: 10px;
+    background: rgba(245, 196, 81, 0.08);
+    border: 1px solid rgba(245, 196, 81, 0.22);
+    border-radius: 8px;
+  }
+  .ed-bulk.hidden { display: none; }
+  .ed-bulk span {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .ed-bulk select {
+    min-width: 180px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 8px;
+    font-size: 13px;
+    outline: none;
+  }
+  .ed-svc {
+    display: grid; grid-template-columns: 1fr 210px; gap: 10px; align-items: center;
+    padding: 7px 2px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .ed-svc.hidden { display: none; }
+  .ed-svc.new {
+    background: linear-gradient(90deg, var(--new-glow), transparent 78%);
+    margin: 0 -8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 8px;
+  }
+  .ed-svc .svc-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .ed-svc .svc-name span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .new-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 18px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(245, 196, 81, 0.12);
+    border: 1px solid rgba(245, 196, 81, 0.32);
+    color: var(--new);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .ed-svc select {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 6px 8px; font-size: 13px; outline: none;
+  }
+  .ed-svc select:focus { border-color: var(--accent); }
+  .ed-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+  .ed-primary { background: var(--accent); color: #08131f; border: none; font-weight: 600; }
+  .ed-primary:hover { color: #08131f; opacity: 0.9; }
+  section {
+    margin-top: 30px;
+  }
+  section h2 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 13px;
+  }
+  .section-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--border);
+    background: #181b21;
+    color: var(--text-dim);
+    border-radius: 6px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .section-toggle:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  section h2 .count {
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  section.collapsed .grid { display: none; }
+  section.collapsed h2 { margin-bottom: 0; }
+  section.new-section h2 {
+    color: var(--new);
+  }
+  section.new-section .card {
+    border-color: rgba(245, 196, 81, 0.4);
+    box-shadow: inset 0 1px 0 rgba(245, 196, 81, 0.08);
+  }
+  section.new-section .card:hover {
+    border-color: var(--new);
+  }
+  /* Fixed service tiles: every card uses the same box size, independent of
+     label length, icon fallback, or how many services are in the group. */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, var(--tile-size));
+    grid-auto-rows: var(--tile-size);
+    justify-content: start;
+    gap: 12px;
+  }
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: var(--tile-size);
+    height: var(--tile-size);
+    min-width: 0;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1e222a, #1a1d24);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  }
+  .card:hover {
+    background: linear-gradient(180deg, #252a34, #1d2129);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .card:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .card .icon {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .card .icon.fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #12151b;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .card .icon.fallback svg {
+    width: 27px;
+    height: 27px;
+    stroke: currentColor;
+  }
+  .card:hover .icon.fallback {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .card .label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    height: 44px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .card .name {
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.25;
+    max-height: 32px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card .host {
+    display: block;
+    width: 100%;
+    font-size: 10px;
+    line-height: 1.1;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+  /* Status light, pinned to the tile's top-right corner. */
+  .dot {
+    position: absolute;
+    top: 11px;
+    right: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .dot.checking { animation: pulse 1.2s ease-in-out infinite; }
+  .dot.up   { background: var(--ok); box-shadow: 0 0 6px 0 var(--ok); }
+  .dot.down { background: var(--bad); box-shadow: 0 0 6px 0 var(--bad); }
+  .card[data-status="down"] {
+    border-color: rgba(255, 107, 107, 0.52);
+  }
+  .card[data-status="checking"] .dot {
+    background: var(--warn);
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  .empty {
+    color: var(--text-dim);
+    font-size: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+  .status {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 18px;
+  }
+  section.hidden { display: none; }
+  .card.hidden { display: none; }
+
+  /* ---- power panel: on/off toggles for on-demand containers ---- */
+  .power-launcher {
+    position: static;
+    transform: none;
+    z-index: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    background: #181b21;
+    color: var(--text-dim);
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 40px;
+    box-shadow: none;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, opacity 0.15s;
+  }
+  .power-launcher:hover,
+  .power-launcher.open {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .power-launcher.hidden { display: none; }
+  .power-launcher.open {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  /* Reflects whether anything is actually up. Was hard-coded to --ok, so it
+     glowed green while every on-demand service was switched off. */
+  .power-launcher .mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 6px 0 var(--ok);
+    transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
+  }
+  .power-launcher .mark.idle {
+    background: var(--text-dim);
+    box-shadow: none;
+    opacity: 0.6;
+  }
+  .power-launcher .count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .power-launcher .count strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .power-launcher .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .power-launcher.unavailable .mark {
+    background: var(--warn);
+    box-shadow: none;
+  }
+  .power-launcher.unavailable .count {
+    color: var(--text-muted);
+  }
+  .power {
+    display: none;
+    width: 100%;
+    margin-top: 26px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    box-shadow: none;
+    overflow: hidden;
+  }
+  .power.open {
+    display: block;
+  }
+  .power-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  .power-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .power-head h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    color: var(--text-dim);
+    font-weight: 700;
+  }
+  .power-close {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-dim);
+    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .power-close:hover { color: var(--text); border-color: var(--accent); }
+  .power-meta {
+    padding: 10px 14px 0;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .power-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    padding: 14px;
+  }
+  .power-empty {
+    padding: 14px;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .power-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px;
+  }
+  .power-item .pmeta { display: flex; flex-direction: column; gap: 2px; }
+  .power-item .pname { font-size: 13px; font-weight: 600; }
+  .power-item .pstate { font-size: 11px; color: var(--text-dim); }
+  .power-item.busy { opacity: .55; pointer-events: none; }
+  .switch { position: relative; width: 42px; height: 24px; flex: none; margin-left: auto; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; cursor: pointer; border-radius: 24px;
+    background: var(--border-strong); transition: background .18s;
+  }
+  .slider::before {
+    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: transform .18s;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(18px); }
+  body.power-view .topline,
+  body.power-view .search-wrap,
+  body.power-view main,
+  body.power-view > .status {
+    display: none;
+  }
+
+  /* ---- mobile ---- */
+  @media (max-width: 600px) {
+    :root { --tile-size: 108px; }
+    body { padding: 20px 14px 48px; }
+    header { grid-template-columns: 1fr; gap: 12px; margin-bottom: 18px; }
+    h1 { font-size: 20px; }
+    .brand { grid-column: 1; grid-row: 1; }
+    .header-actions {
+      grid-column: 1;
+      grid-row: 2;
+      justify-content: stretch;
+    }
+    #edit { padding: 9px 12px; }
+    .icon-btn { width: 38px; height: 38px; }
+    .power-launcher {
+      flex: 1;
+      justify-content: center;
+      padding: 9px 10px;
+    }
+    .search-wrap { grid-column: 1; grid-row: 3; }
+    #search { font-size: 16px; }   /* >=16px stops iOS zoom-on-focus */
+    .kbd { display: none; }         /* no keyboard shortcut on touch */
+    .tagline { display: none; }
+    .topline {
+      align-items: stretch;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 10px 0 12px;
+    }
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .metric {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #181b21;
+    }
+    .metric + .metric::before {
+      display: none;
+    }
+    .metric .value {
+      font-size: 16px;
+    }
+    .toolbar {
+      justify-content: stretch;
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      width: 100%;
+      gap: 6px;
+    }
+    .filter-btn {
+      min-width: 0;
+      justify-content: center;
+      white-space: nowrap;
+      padding: 7px 6px;
+      font-size: 11px;
+    }
+    .filter-dot { flex: none; }
+    section { margin-top: 28px; }
+    /* denser tiles so a phone shows 3 across instead of 2 huge ones */
+    .grid { grid-template-columns: repeat(auto-fill, var(--tile-size)); gap: 10px; }
+    .card { padding: 10px 8px; gap: 6px; border-radius: 8px; }
+    .card .icon { width: 34px; height: 34px; }
+    .card .label { height: 42px; }
+    .card .name { font-size: 12px; }
+    .dot { top: 9px; right: 9px; }
+    /* edit modal: stack each service row over its group picker, no iOS zoom */
+    .modal { padding: 20px 10px; }
+    .modal .panel { padding: 18px 16px 20px; }
+    .ed-svc { grid-template-columns: 1fr; gap: 6px; }
+    .ed-svc select { width: 100%; }
+    .ed-tools { grid-template-columns: 1fr; }
+    .ed-search, .ed-bulk select { width: 100%; font-size: 16px; }
+    .ed-bulk { align-items: stretch; flex-direction: column; }
+    .ed-group input, .ed-svc select { font-size: 16px; }
+    .power { margin-top: 20px; }
+    .power-grid { grid-template-columns: 1fr; }
+  }
+</style>
+<link rel="stylesheet" href="/dashboard-v2.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg class="ui-icon" viewBox="0 0 24 24"><rect width="16" height="6" x="4" y="3" rx="2"/><rect width="16" height="6" x="4" y="15" rx="2"/><path d="M8 6h.01M8 18h.01"/></svg>
+    </span>
+    <div class="brand-copy">
+      <h1>Homelab <span class="dim">example</span></h1>
+      <div class="tagline">Private network workspace</div>
+    </div>
+  </div>
+  <nav class="primary-nav" aria-label="Dashboard views">
+    <button id="services-launcher" class="nav-btn active" type="button">
+      <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
+      <span>Services</span>
+    </button>
+    <button id="power-launcher" class="power-launcher" type="button" aria-controls="power" aria-expanded="false">
+      <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+      <span class="mark idle"></span>
+      <span class="label">On demand</span>
+      <span class="count"><strong id="power-running">0</strong>/<span id="power-total">0</span></span>
+    </button>
+  </nav>
+  <div class="header-actions">
+    <button id="refresh-now" class="icon-btn" type="button" title="Refresh services" aria-label="Refresh services">
+      <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.2 6.5L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.2 5.5L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+    <button id="edit" type="button" title="Edit service groups" aria-label="Edit service groups">
+      <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="workspace-head" aria-live="polite">
+  <div class="search-wrap">
+    <input id="search" type="search" placeholder="Search by service, group, or address" autocomplete="off">
+    <span class="kbd">/</span>
+  </div>
+  <div class="overview">
+    <div class="metric"><span id="metric-total" class="value">0</span><span class="label">Services</span></div>
+    <div class="metric health"><span id="metric-up" class="value">0</span><span class="label">Healthy</span></div>
+    <div class="metric attention"><span id="metric-down" class="value">0</span><span class="label">Attention</span></div>
+    <div class="metric"><span id="metric-groups" class="value">0</span><span class="label">Groups</span></div>
+  </div>
+</div>
+
+<div class="topline">
+  <nav id="category-nav" class="category-nav" aria-label="Service groups"></nav>
+  <div class="toolbar">
+    <div class="filters" aria-label="Status filter">
+      <button class="filter-btn active" type="button" data-status-filter="all"><span class="filter-dot"></span>All</button>
+      <button class="filter-btn" type="button" data-status-filter="up"><span class="filter-dot up"></span>Healthy</button>
+      <button class="filter-btn" type="button" data-status-filter="down"><span class="filter-dot down"></span>Attention</button>
+      <button class="filter-btn" type="button" data-status-filter="checking"><span class="filter-dot checking"></span>Checking</button>
+    </div>
+  </div>
+</div>
+
+<section id="power" class="power" aria-hidden="true"></section>
+<main id="main"></main>
+<div id="status" class="status"></div>
+<div id="editor" class="modal hidden"></div>
+
+<script>
+// Services are discovered dynamically from Traefik's router list (proxied
+// same-origin at /traefik-api/ by nginx — see default.conf). META is just a
+// presentation overlay: it gives known hosts a nice name/icon/category.
+// Anything Traefik routes that isn't in META still appears automatically
+// under "Other" with a derived name — add it here to curate it.
+// desc: shown as the tile tooltip AND used as context so the LLM understands
+// what each app is (both for display and for categorizing new services well).
+const META = {
+  // ---- Media ----
+  "plex.example.com":       { name: "Plex",            icon: "plex",            cat: "Media", desc: "Movie & TV streaming server" },
+  "overseerr.example.com":  { name: "Overseerr",       icon: "overseerr",       cat: "Media", desc: "Media request & discovery for Plex" },
+  "sonarr.example.com":     { name: "Sonarr",          icon: "sonarr",          cat: "Media", desc: "TV series download automation" },
+  "radarr.example.com":     { name: "Radarr",          icon: "radarr",          cat: "Media", desc: "Movie download automation" },
+  "lidarr.example.com":     { name: "Lidarr",          icon: "lidarr",          cat: "Media", desc: "Music download automation" },
+  "bazarr.example.com":     { name: "Bazarr",          icon: "bazarr",          cat: "Media", desc: "Subtitle download automation" },
+  "music.example.com":      { name: "MusicSeerr",      icon: "musicseerr",      cat: "Media", desc: "Music request & discovery" },
+  "playlists.example.com":  { name: "Playlists",       icon: "music-assistant", cat: "Media", desc: "Playlist builder / music assistant" },
+  "prowlarr.example.com":   { name: "Prowlarr",        icon: "prowlarr",        cat: "Media", desc: "Indexer manager for the *arr apps" },
+  "qbit.example.com":       { name: "qBittorrent",     icon: "qbittorrent",     cat: "Media", desc: "BitTorrent download client" },
+  "live.example.com":       { name: "Livestream",      icon: "owncast",         cat: "Media", desc: "Self-hosted livestream (Owncast)" },
+  "discordbot.example.com": { name: "Music Bot",       icon: "discord",         cat: "Media", desc: "Discord music bot" },
+
+  // ---- Productivity ----
+  "vault.example.com":      { name: "Vaultwarden",     icon: "vaultwarden",     cat: "Productivity", desc: "Password manager (Bitwarden-compatible)" },
+  "paperless.example.com":  { name: "Paperless",       icon: "paperless-ngx",   cat: "Productivity", desc: "Document scanning & OCR archive" },
+  "links.example.com":      { name: "Linkding",        icon: "linkding",        cat: "Productivity", desc: "Bookmark manager" },
+  "mealie.example.com":     { name: "Mealie",          icon: "mealie",          cat: "Productivity", desc: "Recipe manager & meal planner" },
+  "actual.example.com":     { name: "Actual Budget",   icon: "actual-budget",   cat: "Productivity", desc: "Personal budgeting & finance" },
+
+  // ---- AI ----
+  "myproject.example.com":  { name: "MyProject",       icon: "ollama",          cat: "AI", desc: "Local AI app workspace" },
+  "docuai.example.com":     { name: "DocuAI",          icon: "ollama",          cat: "AI", desc: "AI document scanning & cross-referencing" },
+  "hermes.example.com":     { name: "Hermes",          icon: "ollama",          cat: "AI", desc: "Personal AI agent gateway & dashboard" },
+
+  // ---- Communication ----
+  "chat.example.com":       { name: "Matrix Chat",     icon: "matrix",          cat: "Communication", desc: "Matrix chat (Cinny client)" },
+  "musicbot.example.com":   { name: "Matrix Music Bot", icon: "matrix",         cat: "Communication", desc: "Matrix music bot" },
+  "ntfy.example.com":       { name: "Ntfy",            icon: "ntfy",            cat: "Communication", desc: "Push notification service" },
+
+  // ---- Tools ----
+  "github.com":        { name: "Forgejo",         icon: "forgejo",         cat: "Tools", desc: "Self-hosted Git forge" },
+  "searx.example.com":      { name: "SearXNG",         icon: "searxng",         cat: "Tools", desc: "Private metasearch engine" },
+  "changes.example.com":    { name: "Changedetection", icon: "changedetection", cat: "Tools", desc: "Website change detection & alerts" },
+
+  // ---- Lab (VM consoles — appear when the `vms` compose profile is up) ----
+  "vm-debian.example.com":  { name: "Debian VM",       icon: "debian",          cat: "Lab", desc: "Debian sandbox VM (web console)" },
+  "vm-windows.example.com": { name: "Windows VM",      icon: "windows-11",      cat: "Lab", desc: "Windows 11 VM (web console)" },
+  "vm-macos.example.com":   { name: "macOS VM",        icon: "macos",           cat: "Lab", desc: "macOS VM (web console)" },
+
+  // ---- Infrastructure ----
+  "traefik.example.com":    { name: "Traefik",         icon: "traefik",         cat: "Infrastructure", desc: "Reverse proxy & TLS ingress" },
+  "adguard.example.com":    { name: "AdGuard",         icon: "adguard-home",    cat: "Infrastructure", desc: "Network ad/tracker-blocking DNS" },
+  "portainer.example.com":  { name: "Portainer",       icon: "portainer",       cat: "Infrastructure", desc: "Docker management UI" },
+  "vpn.example.com":        { name: "WireGuard",       icon: "wireguard",       cat: "Infrastructure", desc: "WireGuard VPN" },
+};
+
+// Hosts to never show (non-UI API/signalling endpoints, placeholders).
+const SKIP = new Set([
+  "llm.example.com", "ollama.example.com", "gateway.local",
+  "livekit.example.com", "lk-jwt.example.com",
+  "dash.example.com",          // the dashboard itself
+  "flaresolverr.example.com",  // internal solver, no real UI
+]);
+
+// Seed categories used only for a brand-new browser's first layout (then you
+// edit freely). CAT_ORDER controls their order.
+const CAT_ORDER = ["Media", "Productivity", "AI", "Communication", "Tools", "Lab", "Infrastructure", "Other"];
+// Icons are self-hosted (bin/dashboard-icons → data/icons, served at
+// /data/icons/) so they load same-origin — no external CDN, works offline / on
+// LAN-only devices / with content blockers. Missing ones fall back to SVGs.
+const ICON_BASE = "/data/icons/";
+const REFRESH_MS = 30000;   // re-probe status + re-discover on this interval
+
+const main = document.getElementById("main");
+const search = document.getElementById("search");
+const statusEl = document.getElementById("status");
+const editBtn = document.getElementById("edit");
+const refreshBtn = document.getElementById("refresh-now");
+const servicesLauncher = document.getElementById("services-launcher");
+const categoryNav = document.getElementById("category-nav");
+const editor = document.getElementById("editor");
+const metricTotal = document.getElementById("metric-total");
+const metricUp = document.getElementById("metric-up");
+const metricDown = document.getElementById("metric-down");
+const metricGroups = document.getElementById("metric-groups");
+let currentSvc = {};   // host -> service, kept fresh so the editor knows what exists
+let currentDynamic = true;
+let statusFilter = "all";
+let refreshing = false;
+const FAVORITES_KEY = "dash-favorites";
+
+function loadFavorites() {
+  try { return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+
+function saveFavorites(favorites) {
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites]));
+}
+
+// The AI-designed layout: { groups: [{ name, hosts: [...] }] }. Persisted so the
+// page loads instantly with the same grouping and only calls the model when it
+// needs to (first ever load, new services to slot in, or a manual Reorganize).
+// The SHARED layout (what everyone sees) is authored server-side at
+// /data/layout.json and maintained centrally. A browser can opt into a PERSONAL
+// override via the ✎ Edit modal (stored locally, this browser only); with no
+// override, the shared layout is shown. So "organize once" applies to everyone.
+const SHARED_LAYOUT_URL = "/data/layout.json";
+const PERSONAL_KEY = "dash-personal";
+let layout = null;
+const loadPersonal = () => { try { return JSON.parse(localStorage.getItem(PERSONAL_KEY) || "null"); } catch { return null; } };
+const saveLayout = () => localStorage.setItem(PERSONAL_KEY, JSON.stringify(layout));  // editor Save → personal override
+const clearPersonal = () => localStorage.removeItem(PERSONAL_KEY);
+async function loadSharedLayout() {
+  try {
+    const r = await fetch(SHARED_LAYOUT_URL, { cache: "no-store" });
+    if (r.ok) { const s = await r.json(); if (s && Array.isArray(s.groups) && s.groups.length) return s; }
+  } catch { /* fall through to seed */ }
+  return null;
+}
+
+// Descriptions collected from container/image labels by bin/dashboard-meta,
+// served at /data/meta.json. host -> { desc }. Empty until the collector runs.
+let containerMeta = {};
+
+async function loadContainerMeta() {
+  try {
+    const res = await fetch("/data/meta.json", { cache: "no-store" });
+    if (res.ok) containerMeta = await res.json();
+  } catch { /* collector not set up yet — descriptions just come from META/LLM */ }
+}
+
+function deriveName(host) {
+  const sub = host.split(".")[0];
+  return sub.charAt(0).toUpperCase() + sub.slice(1).replace(/[-_]/g, " ");
+}
+
+// Display-name overrides for hosts where the container name isn't the right
+// label: services sharing another container's network (qbit/prowlarr ride the
+// gluetun VPN container, so the collector sees "gluetun"), or hosts routed by
+// Traefik's file provider with no container at all (hermes).
+const NAME_OVERRIDE = {
+  "qbit.example.com": "qbittorrent",
+  "prowlarr.example.com": "prowlarr",
+  "hermes.example.com": "hermes",
+};
+
+function toService(host) {
+  const cm = containerMeta[host] || {};
+  const meta = META[host] || { name: deriveName(host), icon: host.split(".")[0], cat: "Other" };
+  // Display name: explicit override → Docker container name (1:1) → curated /
+  // derived. Icon + seed category from META; description prefers the label.
+  return {
+    host,
+    url: "https://" + host,
+    name: NAME_OVERRIDE[host] || cm.name || meta.name,
+    icon: meta.icon,
+    cat: meta.cat,
+    desc: cm.desc || meta.desc || "",
+    // Real docker container name for the /status/ health lookup. NAME_OVERRIDE
+    // fixes netns-shared services (qbit/prowlarr map to their own container, not
+    // the gluetun the collector sees). Null → no container (file-provider route)
+    // → the dot falls back to the Traefik reachability probe.
+    container: NAME_OVERRIDE[host] || cm.name || null,
+  };
+}
+
+// Pull every Host(`…`) out of Traefik's router rules; dedupe; drop internal
+// routers and anything in SKIP.
+async function discover() {
+  const res = await fetch("/traefik-api/http/routers", { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error("Traefik API " + res.status);
+  const routers = await res.json();
+  const hosts = new Set();
+  for (const r of routers) {
+    if (!r.rule || (r.name || "").includes("@internal")) continue;
+    if (r.entryPoints && !r.entryPoints.includes("websecure")) continue;
+    for (const m of r.rule.match(/Host\(`([^`]+)`\)/g) || []) {
+      hosts.add(m.slice(6, -2));
+    }
+  }
+  return [...hosts];
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+const FALLBACK_ICONS = {
+  media: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.8v14.4L18 12 7 4.8z"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10"/><path d="M8 10l4 4 4-4"/><path d="M5 19h14"/></svg>`,
+  music: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>`,
+  productivity: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l3.5 3.5v13.5H7z"/><path d="M14 3.5V7h3.5"/><path d="M9.5 12h5"/><path d="M9.5 15.5h5"/></svg>`,
+  lock: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="10" width="13" height="10" rx="2"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"/><path d="M12 14v2"/></svg>`,
+  bookmark: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5h10v15l-5-3-5 3v-15z"/></svg>`,
+  meal: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M5 4v5a2 2 0 0 0 4 0V4"/><path d="M15 4v16"/><path d="M15 4c3 1.2 4.5 3.4 4.5 6.5H15"/></svg>`,
+  wallet: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7.5h13.5A1.5 1.5 0 0 1 20 9v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2h10"/><path d="M16 13h4"/></svg>`,
+  ai: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.2 4.1 3.8 1.2-3.8 1.2L12 14l-1.2-4-3.8-1.2 3.8-1.2L12 3.5z"/><path d="M18 14l.7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14z"/></svg>`,
+  communication: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6.5h14v9.5H9l-4 3v-12.5z"/><path d="M8.5 10h7"/><path d="M8.5 13h4.5"/></svg>`,
+  bell: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10a6 6 0 0 0-12 0c0 4-2 5-2 5h16s-2-1-2-5"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>`,
+  tools: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5a4 4 0 0 0 4 4L9 19l-4-4 9.5-9.5z"/><path d="M6.5 16.5l1 1"/></svg>`,
+  git: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="6" cy="18" r="2"/><path d="M6 8v8"/><path d="M8 6h3a3 3 0 0 1 3 3v3a3 3 0 0 0 3 3"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="M15 15l4 4"/></svg>`,
+  watch: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"/><circle cx="12" cy="12" r="2.5"/></svg>`,
+  lab: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M9 20h6"/><path d="M12 16v4"/><path d="M8 9l2.2 2L8 13"/><path d="M13 13h3"/></svg>`,
+  infrastructure: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="5" rx="1.5"/><rect x="5" y="15" width="14" height="5" rx="1.5"/><path d="M8 9v6"/><path d="M16 9v6"/><path d="M8 6.5h.01"/><path d="M8 17.5h.01"/></svg>`,
+  route: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h5a3 3 0 0 1 0 6h-2a3 3 0 0 0 0 6h5"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l7 3v5.2c0 4.4-2.8 7.3-7 8.8-4.2-1.5-7-4.4-7-8.8V6.5l7-3z"/><path d="M9 12l2 2 4-4"/></svg>`,
+  boxes: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l6 3.2v6.6l-6 3.2-6-3.2V6.7l6-3.2z"/><path d="M6.5 7L12 10l5.5-3"/><path d="M12 10v6.5"/><path d="M8 18.2l4 2.3 4-2.3"/></svg>`,
+  other: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 9h6v6H9z"/></svg>`,
+};
+
+const FALLBACK_ICON_BY_NAME = {
+  plex: "media", overseerr: "search", sonarr: "media", radarr: "media", lidarr: "music", bazarr: "media",
+  musicseerr: "music", "music-assistant": "music", prowlarr: "search", qbittorrent: "download", owncast: "media",
+  discord: "music", vaultwarden: "lock", "paperless-ngx": "productivity", linkding: "bookmark", mealie: "meal",
+  "actual-budget": "wallet", ollama: "ai", matrix: "communication", ntfy: "bell", forgejo: "git",
+  searxng: "search", changedetection: "watch", debian: "lab", "windows-11": "lab", macos: "lab",
+  traefik: "route", "adguard-home": "shield", portainer: "boxes", wireguard: "shield",
+};
+
+function fallbackIcon(icon, cat) {
+  const span = document.createElement("span");
+  span.className = "icon fallback";
+  const key = FALLBACK_ICON_BY_NAME[String(icon || "").toLowerCase()] || String(cat || "other").toLowerCase();
+  span.innerHTML = FALLBACK_ICONS[key] || FALLBACK_ICONS.other;
+  return span;
+}
+
+function isNewGroup(name) {
+  return String(name || "").trim().toLowerCase() === "new";
+}
+
+function normalizeGroups(groups) {
+  const merged = [];
+  const fresh = [];
+  for (const g of groups || []) {
+    if (!g || !Array.isArray(g.hosts)) continue;
+    const name = String(g.name || "Other").trim() || "Other";
+    if (isNewGroup(name)) fresh.push(...g.hosts);
+    else merged.push({ name, hosts: [...g.hosts] });
+  }
+  return fresh.length ? [{ name: "New", hosts: [...new Set(fresh)] }, ...merged] : merged;
+}
+
+function normalizeGroupNames(names) {
+  const seen = new Set();
+  const cleaned = [];
+  for (const raw of names || []) {
+    const name = String(raw || "Other").trim() || "Other";
+    const key = isNewGroup(name) ? "new" : name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push(isNewGroup(name) ? "New" : name);
+  }
+  return cleaned.sort((a, b) => Number(isNewGroup(b)) - Number(isNewGroup(a)));
+}
+
+function groupId(name) {
+  return "group-" + String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function createServiceCard(s, groupName, pinnedCopy = false) {
+  const favorites = loadFavorites();
+  const shell = document.createElement("div");
+  shell.className = "card-shell";
+
+  const a = document.createElement("a");
+  a.className = "card";
+  a.href = s.url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.dataset.host = s.host;
+  a.dataset.search = (s.name + " " + groupName + " " + s.host + " " + (s.desc || "")).toLowerCase();
+  a.dataset.container = s.container || "";
+  a.dataset.status = "checking";
+  if (pinnedCopy) a.dataset.pinnedCopy = "true";
+  a.title = s.desc ? s.name + " — " + s.desc : s.name;
+  a.innerHTML = `
+    <img class="icon" src="${ICON_BASE}${s.icon}.png" alt=""
+         onerror="this.replaceWith(fallbackIcon('${escapeHtml(s.icon)}','${escapeHtml(s.cat)}'))">
+    <div class="label">
+      <span class="name">${escapeHtml(s.name)}</span>
+      <span class="desc">${escapeHtml(s.desc || s.host)}</span>
+      <span class="host">${escapeHtml(s.host)}</span>
+    </div>
+    <span class="service-state"><span class="dot checking" title="checking…"></span><span class="state-label">Checking</span></span>`;
+
+  const favorite = document.createElement("button");
+  const active = favorites.has(s.host);
+  favorite.className = "favorite-btn" + (active ? " active" : "");
+  favorite.type = "button";
+  favorite.dataset.favoriteHost = s.host;
+  favorite.setAttribute("aria-pressed", active ? "true" : "false");
+  favorite.setAttribute("aria-label", `${active ? "Unpin" : "Pin"} ${s.name}`);
+  favorite.title = active ? "Remove from pinned" : "Pin to quick access";
+  favorite.textContent = active ? "★" : "☆";
+
+  shell.append(a, favorite);
+  return shell;
+}
+
+function appendServiceSection(group, svc, options = {}) {
+  const hosts = group.hosts.filter(h => svc[h]);
+  if (!hosts.length) return;
+  const section = document.createElement("section");
+  if (isNewGroup(group.name)) section.classList.add("new-section");
+  if (options.pinned) section.classList.add("pinned-section");
+  section.dataset.group = group.name;
+  section.id = groupId(group.name);
+  section.innerHTML = `<h2><button class="section-toggle" type="button" title="Collapse group" aria-label="Collapse ${escapeHtml(group.name)}">⌄</button>${escapeHtml(group.name)} <span class="count">${hosts.length}</span></h2><div class="grid"></div>`;
+  const grid = section.querySelector(".grid");
+  for (const host of hosts) grid.appendChild(createServiceCard(svc[host], group.name, !!options.pinned));
+  main.appendChild(section);
+}
+
+function renderCategoryNav(groups, pinnedHosts) {
+  const items = [];
+  if (pinnedHosts.length) items.push({ name: "Pinned", count: pinnedHosts.length });
+  for (const group of groups) {
+    const count = group.hosts.filter(host => currentSvc[host]).length;
+    if (count) items.push({ name: group.name, count });
+  }
+  categoryNav.innerHTML = items.map((item, index) => `
+    <button class="category-btn${index === 0 ? " active" : ""}" type="button" data-group-target="${escapeHtml(groupId(item.name))}">
+      ${escapeHtml(item.name)}<span class="nav-count">${item.count}</span>
+    </button>`).join("");
+}
+
+// Render from a group list [{ name, hosts }] against a host->service map.
+function render(groups, svc) {
+  main.innerHTML = "";
+  const favorites = loadFavorites();
+  const pinnedHosts = [...favorites].filter(host => svc[host]);
+  if (pinnedHosts.length) appendServiceSection({ name: "Pinned", hosts: pinnedHosts }, svc, { pinned: true });
+  for (const g of groups) {
+    const hosts = g.hosts.filter(h => svc[h]);
+    if (!hosts.length) continue;
+    appendServiceSection({ name: g.name, hosts }, svc);
+  }
+  renderCategoryNav(groups, pinnedHosts);
+  updateSummary();
+}
+
+function applyFilter(q) {
+  q = (q || "").trim().toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+  for (const section of main.querySelectorAll("section")) {
+    let visible = 0;
+    for (const card of section.querySelectorAll(".card")) {
+      const matchesSearch = tokens.every(t => card.dataset.search.includes(t));
+      const matchesStatus = statusFilter === "all" || card.dataset.status === statusFilter;
+      const match = matchesSearch && matchesStatus;
+      card.classList.toggle("hidden", !match);
+      if (match) visible++;
+    }
+    section.classList.toggle("hidden", visible === 0);
+  }
+}
+
+function setCardStatus(card, cls, title) {
+  const label = cls === "up" ? "Healthy" : cls === "down" ? "Attention" : "Checking";
+  for (const match of main.querySelectorAll(".card")) {
+    if (match.dataset.host !== card.dataset.host) continue;
+    const dot = match.querySelector(".dot");
+    dot.className = "dot " + cls;
+    dot.title = title;
+    match.querySelector(".state-label").textContent = label;
+    match.dataset.status = cls;
+  }
+}
+
+function updateSummary() {
+  const cards = [...main.querySelectorAll('.card:not([data-pinned-copy="true"])')];
+  const up = cards.filter(c => c.dataset.status === "up").length;
+  const down = cards.filter(c => c.dataset.status === "down").length;
+  const checking = cards.filter(c => c.dataset.status === "checking").length;
+  metricTotal.textContent = cards.length;
+  metricUp.textContent = up;
+  metricDown.textContent = down;
+  metricGroups.textContent = (layout?.groups || []).length;
+  const all = document.querySelector('[data-status-filter="all"]');
+  const upBtn = document.querySelector('[data-status-filter="up"]');
+  const downBtn = document.querySelector('[data-status-filter="down"]');
+  const checkingBtn = document.querySelector('[data-status-filter="checking"]');
+  if (all) all.lastChild.textContent = `All ${cards.length}`;
+  if (upBtn) upBtn.lastChild.textContent = `Healthy ${up}`;
+  if (downBtn) downBtn.lastChild.textContent = `Attention ${down}`;
+  if (checkingBtn) checkingBtn.lastChild.textContent = `Checking ${checking}`;
+}
+
+// Reachability check. We can't probe other origins from the browser reliably
+// (Chrome's ORB rejects cross-origin no-cors HTML responses → false "down"), so
+// we hit the same-origin /probe/<host> endpoint, which nginx bounces through
+// Traefik. Any real HTTP status means the service answered; Traefik returns
+// 502/503/504 when the backend is down.
+// Per-container docker state + healthcheck verdict from the dashboard-power
+// backend (/status/), keyed by container name. Empty if the backend is absent.
+let containerStatus = {};
+async function loadStatus() {
+  try {
+    const res = await fetch("/status/", { cache: "no-store" });
+    containerStatus = res.ok ? await res.json() : {};
+  } catch { containerStatus = {}; }
+}
+
+// Map a docker {status, health} to a dot class + title. Healthcheck verdict wins
+// when present (catches a wedged-but-"running" container); otherwise fall back to
+// the raw run state. Returns null if we have no docker info for this card.
+function dockerDot(card) {
+  const name = card.dataset.container;
+  const st = name && containerStatus[name];
+  if (!st) return null;
+  // Not running: report the run state. Docker keeps the LAST health verdict on a
+  // stopped container, so we must not read it as "failing" — it's just stopped.
+  if (st.status !== "running") {
+    if (st.status === "restarting" || st.status === "paused") return { cls: "checking", title: st.status };
+    return { cls: "down", title: st.status };   // exited / dead / created
+  }
+  // Running: the healthcheck verdict is authoritative (catches wedged-but-up).
+  if (st.health === "unhealthy") return { cls: "down",     title: "unhealthy (failing its healthcheck)" };
+  if (st.health === "starting")  return { cls: "checking", title: "starting…" };
+  return { cls: "up", title: st.health === "healthy" ? "healthy" : "running (no healthcheck)" };
+}
+
+async function ping(card) {
+  // Prefer real docker health when we know the container; it's authoritative and
+  // covers non-web services. Fall back to the Traefik reachability probe for
+  // file-provider routes (hermes) or hosts with no matching container.
+  const dk = dockerDot(card);
+  if (dk) { setCardStatus(card, dk.cls, dk.title); updateSummary(); applyFilter(search.value); return; }
+  const host = new URL(card.href).hostname;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    // redirect:"manual" stops the browser following a service's login redirect
+    // off-origin (which ORB would then block → false "down"). A 3xx comes back
+    // as an opaque response (status 0) — that still means the service answered.
+    const res = await fetch("/probe/" + host, { cache: "no-store", redirect: "manual", signal: ctrl.signal });
+    // 421 is our own nginx guard (see default.conf): this host has no probe
+    // route, so we never reached the service at all. Say so rather than
+    // inferring "up" from a status the service never sent.
+    if (res.status === 421) {
+      setCardStatus(card, "down", "not probeable · no route for " + host);
+      return;
+    }
+    const down = res.status >= 502 && res.status <= 504;
+    setCardStatus(card, down ? "down" : "up", down ? "unreachable · HTTP " + res.status
+                     : "reachable" + (res.status ? " · HTTP " + res.status : " · redirect"));
+  } catch {
+    setCardStatus(card, "down", "probe failed");
+  } finally {
+    clearTimeout(t);
+    updateSummary();
+    applyFilter(search.value);
+  }
+}
+
+// Probe all cards with a small concurrency cap so we don't open 40+ sockets.
+async function checkAll() {
+  const queue = [...main.querySelectorAll('.card:not([data-pinned-copy="true"])')];
+  const worker = async () => { while (queue.length) await ping(queue.shift()); };
+  await Promise.all(Array.from({ length: 8 }, worker));
+  updateSummary();
+}
+
+// Seed grouping for a brand-new browser (no layout yet): group by the curated
+// META category, CAT_ORDER first. Purely deterministic — no network, no AI.
+function seedGroups(services) {
+  const by = {};
+  for (const s of services) (by[s.cat] = by[s.cat] || []).push(s.host);
+  return normalizeGroups(Object.keys(by)
+    .sort((a, b) => {
+      const ia = CAT_ORDER.indexOf(a), ib = CAT_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+    })
+    .map(name => ({ name, hosts: by[name] })));
+}
+
+function paint(groups, svc, dynamic, personal) {
+  currentSvc = svc;
+  currentDynamic = dynamic;
+  render(groups, svc);
+  applyFilter(search.value);
+  const n = Object.keys(svc).length;
+  statusEl.textContent = dynamic
+    ? `${n} services · auto-discovered from Traefik · updates every ${REFRESH_MS / 1000}s`
+    : `${n} services · static fallback (Traefik API unreachable)`;
+  updateSummary();
+  checkAll();
+}
+
+async function refresh() {
+  if (refreshing) return;
+  refreshing = true;
+  refreshBtn.disabled = true;
+  let hosts, dynamic = true;
+  try {
+    try {
+      hosts = await discover();
+    } catch (e) {
+      console.warn("dynamic discovery failed, using static fallback:", e);
+      hosts = Object.keys(META);
+      dynamic = false;
+    }
+    hosts = hosts.filter(h => !SKIP.has(h));
+    await Promise.all([loadContainerMeta(), loadStatus()]);   // status ready before dots render
+    const services = hosts.map(toService);
+    const svc = Object.fromEntries(services.map(s => [s.host, s]));
+
+    // Active layout: personal override (opt-in via the editor) → shared server
+    // layout (everyone) → seeded fallback.
+    const personal = loadPersonal();
+    if (personal && Array.isArray(personal.groups) && personal.groups.length) {
+      layout = { groups: normalizeGroups(personal.groups) };
+    } else {
+      const shared = await loadSharedLayout();
+      layout = shared ? { groups: normalizeGroups(shared.groups) } : { groups: seedGroups(services) };
+    }
+    // Reconcile with what's actually running (in-memory): drop gone hosts, file
+    // genuinely-new services under "New" ONCE.
+    let changed = false;
+    for (const g of layout.groups) {
+      const n = g.hosts.length;
+      g.hosts = g.hosts.filter(h => hosts.includes(h));
+      if (g.hosts.length !== n) changed = true;
+    }
+    layout.groups = layout.groups.filter(g => g.hosts.length);
+    const known = new Set(layout.groups.flatMap(g => g.hosts));
+    const fresh = hosts.filter(h => !known.has(h));
+    if (fresh.length) {
+      let ng = layout.groups.find(g => g.name === "New");
+      if (!ng) { ng = { name: "New", hosts: [] }; layout.groups.unshift(ng); }
+      for (const h of fresh) if (!ng.hosts.includes(h)) ng.hosts.push(h);
+      changed = true;
+    }
+    layout.groups = normalizeGroups(layout.groups);
+    // Persist ONLY a personal override — the shared layout stays server-authored.
+    if (personal && changed) saveLayout();
+    paint(layout.groups, svc, dynamic, !!personal);
+    loadPower();   // refresh on-demand toggles alongside discovery (safe no-op if backend absent)
+  } finally {
+    refreshing = false;
+    refreshBtn.disabled = false;
+  }
+}
+
+// ---- power panel: on/off toggles for on-demand containers -----------------
+// Driven by the dashboard-power backend (/power/), NOT Traefik discovery — a
+// stopped container has no router, so it must be listed by the backend's
+// allowlist to be togglable back on. Nicely degrades: if the backend isn't
+// deployed, /power/ 404s and the panel stays hidden.
+const powerLauncher = document.getElementById("power-launcher");
+const powerEl = document.getElementById("power");
+const powerRunningEl = document.getElementById("power-running");
+const powerTotalEl = document.getElementById("power-total");
+const POWER_META = {
+  "minecraft":          { name: "Minecraft",          icon: "minecraft",   cat: "Media" },
+  "plan-minecraft":     { name: "Minecraft Map",      icon: "minecraft",   cat: "Media" },
+  "minecraft-backup":   { name: "Minecraft Backup",   icon: "minecraft",   cat: "Infrastructure" },
+  "sons-of-the-forest": { name: "Sons of the Forest", icon: "steam",       cat: "Media" },
+  "palworld":           { name: "Palworld",           icon: "palworld",    cat: "Media" },
+  "portainer":          { name: "Portainer",          icon: "portainer",   cat: "Infrastructure" },
+  "vm-debian":          { name: "Debian VM",          icon: "debian",      cat: "Lab" },
+  "vm-windows":         { name: "Windows VM",         icon: "windows-11",  cat: "Lab" },
+  "vm-macos":           { name: "macOS VM",           icon: "macos",       cat: "Lab" },
+};
+const prettyName = n => POWER_META[n]?.name || n.replace(/(^|[-_])(\w)/g, (_, s, c) => (s ? " " : "") + c.toUpperCase());
+
+function setPowerOpen(open) {
+  powerEl.classList.toggle("open", open);
+  document.body.classList.toggle("power-view", open);
+  powerLauncher.classList.toggle("open", open);
+  servicesLauncher.classList.toggle("active", !open);
+  powerLauncher.setAttribute("aria-expanded", open ? "true" : "false");
+  powerEl.setAttribute("aria-hidden", open ? "false" : "true");
+  if (open) window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function updatePowerCounts(items) {
+  const total = items.length;
+  const running = items.filter(it => it.running).length;
+  powerRunningEl.textContent = running;
+  powerTotalEl.textContent = total;
+  powerLauncher.classList.toggle("hidden", !total);
+  powerLauncher.classList.remove("unavailable");
+  // Dim the dot when nothing is up, so it stops claiming "all good" while
+  // every on-demand service is off.
+  powerLauncher.querySelector(".mark")?.classList.toggle("idle", running === 0);
+  powerLauncher.title = running
+    ? `${running} of ${total} on-demand services running`
+    : `${total} on-demand services, all off — click to start one`;
+}
+
+function renderPowerUnavailable(message) {
+  powerRunningEl.textContent = "0";
+  powerTotalEl.textContent = "0";
+  powerLauncher.classList.remove("hidden");
+  powerLauncher.classList.add("unavailable");
+  powerLauncher.querySelector(".mark")?.classList.remove("idle");
+  powerLauncher.title = "On-demand controls unavailable — power backend not responding";
+  powerEl.innerHTML = `<div class="power-shell">
+    <div class="power-head">
+      <h2>On-demand services</h2>
+      <button class="power-close" type="button" data-power-close title="Back to services">←</button>
+    </div>
+    <div class="power-empty">${escapeHtml(message)}</div>
+  </div>`;
+  powerEl.classList.remove("hidden");
+}
+
+async function loadPower() {
+  let items;
+  try {
+    const r = await fetch("/power/", { cache: "no-store" });
+    if (!r.ok) throw new Error("power " + r.status);
+    items = await r.json();
+  } catch {
+    // This fires in production too, whenever the sidecar is down — so it must
+    // describe the actual fault, not assume a local preview.
+    renderPowerUnavailable("On-demand controls are unavailable — the power backend did not respond. Check that dashboard-power is running.");
+    return;
+  }
+  if (!Array.isArray(items) || !items.length) {
+    renderPowerUnavailable("No on-demand services are currently exposed by the power backend.");
+    return;
+  }
+  const wasOpen = powerEl.classList.contains("open");
+  updatePowerCounts(items);
+  renderPower(items);
+  powerEl.classList.remove("hidden");
+  setPowerOpen(wasOpen);
+}
+
+// Docker's raw states ("exited", "created", "dead") leak implementation detail
+// and read as breakage — "exited" looks like a crash when it just means off.
+function stateLabel(it) {
+  if (it.running) return "running";
+  switch (it.state) {
+    case "exited":
+    case "created":
+    case "dead":       return "off";
+    case "restarting": return "starting…";
+    case "paused":     return "paused";
+    case "removing":   return "removing…";
+    default:           return it.state || "off";
+  }
+}
+
+function renderPower(items) {
+  powerEl.innerHTML = `<div class="power-shell">
+    <div class="power-head">
+      <h2>On-demand services</h2>
+      <button class="power-close" type="button" data-power-close title="Back to services">←</button>
+    </div>
+    <div class="power-meta">Heavy services kept off until you need them — flip one on to start it.</div>
+    <div class="power-meta power-tally">${items.filter(it => it.running).length} of ${items.length} running</div>
+    <div class="power-grid"></div>
+  </div>`;
+  const grid = powerEl.querySelector(".power-grid");
+  for (const it of items) {
+    const meta = POWER_META[it.name] || { icon: it.name, cat: "Other" };
+    const row = document.createElement("div");
+    row.className = "power-item";
+    row.dataset.name = it.name;
+    row.innerHTML = `
+      <img class="icon picon" src="${ICON_BASE}${meta.icon}.png" alt=""
+           onerror="this.replaceWith(fallbackIcon('${escapeHtml(meta.icon)}','${escapeHtml(meta.cat)}'))">
+      <div class="pmeta">
+        <span class="pname">${escapeHtml(prettyName(it.name))}</span>
+        <span class="pstate">${stateLabel(it)}</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" ${it.running ? "checked" : ""}>
+        <span class="slider"></span>
+      </label>`;
+    grid.appendChild(row);
+  }
+}
+
+powerLauncher.addEventListener("click", () => {
+  setPowerOpen(!powerEl.classList.contains("open"));
+});
+
+servicesLauncher.addEventListener("click", () => setPowerOpen(false));
+
+powerEl.addEventListener("click", e => {
+  if (e.target.closest("[data-power-close]")) setPowerOpen(false);
+});
+
+powerEl.addEventListener("change", async e => {
+  const input = e.target.closest('input[type="checkbox"]');
+  if (!input) return;
+  const row = input.closest(".power-item");
+  const name = row.dataset.name;
+  const action = input.checked ? "start" : "stop";
+  row.classList.add("busy");
+  row.querySelector(".pstate").textContent = action === "start" ? "starting…" : "stopping…";
+  try {
+    const r = await fetch(`/power/${encodeURIComponent(name)}/${action}`, { method: "POST" });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || r.status);
+    input.checked = !!data.running;
+    row.querySelector(".pstate").textContent = stateLabel(data);
+    const items = [...powerEl.querySelectorAll(".power-item")].map(r => ({
+      running: r.querySelector('input[type="checkbox"]').checked,
+    }));
+    updatePowerCounts(items);
+    // Keep the panel's own tally honest after a toggle, not just the launcher's.
+    const tally = powerEl.querySelector(".power-tally");
+    if (tally) tally.textContent = `${items.filter(i => i.running).length} of ${items.length} running`;
+  } catch (err) {
+    input.checked = !input.checked;   // revert on failure
+    row.querySelector(".pstate").textContent = "error: " + err.message;
+  } finally {
+    row.classList.remove("busy");
+  }
+});
+
+// ---- manual group editor --------------------------------------------------
+// Reads the current layout + discovered services into an editable form; on save
+// rebuilds the layout straight from the DOM (group name inputs + per-service
+// selects), so there's no model to drift out of sync.
+function openEditor() {
+  const names = (layout?.groups || []).map(g => g.name);
+  if (!names.length) names.push("Other");
+  const assign = {};
+  for (const g of layout?.groups || []) for (const h of g.hosts) assign[h] = g.name;
+  renderEditor(names, assign);
+  editor.classList.remove("hidden");
+}
+
+function renderEditor(names, assign) {
+  names = normalizeGroupNames(names);
+  const groupRows = names.map((name, i) => `
+    <div class="ed-group">
+      <input class="ed-name" data-i="${i}" value="${escapeHtml(name)}" placeholder="Group name">
+      <button class="ed-btn" data-act="up"   data-i="${i}" title="Move up">↑</button>
+      <button class="ed-btn" data-act="down" data-i="${i}" title="Move down">↓</button>
+      <button class="ed-btn" data-act="del"  data-i="${i}" title="Delete group">✕</button>
+    </div>`).join("");
+
+  const hosts = Object.keys(currentSvc).sort((a, b) => {
+    const an = isNewGroup(assign[a]);
+    const bn = isNewGroup(assign[b]);
+    if (an !== bn) return an ? -1 : 1;
+    const au = !assign[a];
+    const bu = !assign[b];
+    if (au !== bu) return au ? -1 : 1;
+    return currentSvc[a].name.localeCompare(currentSvc[b].name);
+  });
+  const needsCount = hosts.filter(h => isNewGroup(assign[h]) || !assign[h]).length;
+  const newCount = hosts.filter(h => isNewGroup(assign[h])).length;
+  const targetNames = names.filter(n => !isNewGroup(n));
+  const bulkOptions = targetNames.map(n => `<option>${escapeHtml(n)}</option>`).join("");
+  const svcRows = hosts.map(h => {
+    const cur = assign[h] && names.includes(assign[h]) ? assign[h] : "";
+    const opts = [`<option value=""${cur ? "" : " selected"}>— unassigned —</option>`]
+      .concat(names.map(n => `<option${n === cur ? " selected" : ""}>${escapeHtml(n)}</option>`)).join("");
+    const needs = isNewGroup(cur) || !cur;
+    const searchText = `${currentSvc[h].name} ${h} ${currentSvc[h].desc || ""} ${cur}`.toLowerCase();
+    return `<div class="ed-svc${isNewGroup(cur) ? " new" : ""}" data-needs="${needs ? "1" : "0"}" data-search="${escapeHtml(searchText)}">
+      <span class="svc-name" title="${escapeHtml(currentSvc[h].desc || "")}">
+        <span>${escapeHtml(currentSvc[h].name)}</span>
+        ${isNewGroup(cur) ? `<span class="new-badge">new</span>` : ""}
+      </span>
+      <select class="ed-assign" data-host="${escapeHtml(h)}">${opts}</select>
+    </div>`;
+  }).join("");
+
+  editor.innerHTML = `<div class="panel">
+    <h3>Edit groups</h3>
+    <div class="sub">Rename, reorder, add or remove groups, and assign each service. Saved in this browser.</div>
+    <div class="ed-section-title">Groups</div>
+    ${groupRows}
+    <button class="ed-btn" data-act="add">+ Add group</button>
+    <div class="ed-section-title">Services · ${hosts.length}</div>
+    <div class="ed-tools">
+      <input id="ed-search" class="ed-search" type="search" placeholder="Search services" autocomplete="off">
+      <div class="ed-filters">
+        <button class="ed-btn${needsCount ? " active" : ""}" data-ed-filter="needs">Needs sorting · ${needsCount}</button>
+        <button class="ed-btn${needsCount ? "" : " active"}" data-ed-filter="all">All · ${hosts.length}</button>
+      </div>
+      <div class="ed-bulk${newCount && targetNames.length ? "" : " hidden"}">
+        <span>${newCount} new service${newCount === 1 ? "" : "s"}</span>
+        <select id="ed-bulk-group">${bulkOptions}</select>
+        <button class="ed-btn" data-act="bulk-new">Move New to group</button>
+      </div>
+    </div>
+    ${svcRows}
+    <div class="ed-actions">
+      <button class="ed-btn" data-act="cancel">Cancel</button>
+      <button class="ed-btn ed-primary" data-act="save">Save</button>
+    </div>
+  </div>`;
+  applyEditorFilter();
+}
+
+// Snapshot the form into {names, assign} so structural edits (add/reorder/delete)
+// re-render without losing per-service choices already made.
+function readEditor() {
+  const names = [...editor.querySelectorAll(".ed-name")].map(i => i.value.trim() || "Untitled");
+  const assign = {};
+  editor.querySelectorAll(".ed-assign").forEach(s => { if (s.value) assign[s.dataset.host] = s.value; });
+  return { names, assign };
+}
+
+function closeEditor() { editor.classList.add("hidden"); editor.innerHTML = ""; }
+
+function applyEditorFilter() {
+  const q = (editor.querySelector("#ed-search")?.value || "").trim().toLowerCase();
+  const active = editor.querySelector("[data-ed-filter].active")?.dataset.edFilter || "all";
+  const tokens = q.split(/\s+/).filter(Boolean);
+  for (const row of editor.querySelectorAll(".ed-svc")) {
+    const matchesText = tokens.every(t => row.dataset.search.includes(t));
+    const matchesFilter = active !== "needs" || row.dataset.needs === "1";
+    row.classList.toggle("hidden", !(matchesText && matchesFilter));
+  }
+}
+
+function saveEditor() {
+  const { names, assign } = readEditor();
+  const seen = [], order = [];
+  for (const n of names) if (!seen.includes(n)) { seen.push(n); order.push(n); }   // dedupe, keep order
+  const byName = Object.fromEntries(order.map(n => [n, []]));
+  for (const [h, n] of Object.entries(assign)) if (byName[n]) byName[n].push(h);
+  layout = { groups: order.map(n => ({ name: n, hosts: byName[n] })).filter(g => g.hosts.length) };
+  layout.groups = normalizeGroups(layout.groups);
+  saveLayout();
+  closeEditor();
+  render(layout.groups, currentSvc);
+  applyFilter(search.value);
+  statusEl.textContent = `edited by hand · ${Object.keys(currentSvc).length} services · ${layout.groups.length} groups`;
+  checkAll();
+}
+
+editor.addEventListener("click", e => {
+  const filter = e.target.closest("[data-ed-filter]");
+  if (filter) {
+    editor.querySelectorAll("[data-ed-filter]").forEach(b => b.classList.toggle("active", b === filter));
+    applyEditorFilter();
+    return;
+  }
+  const b = e.target.closest("[data-act]");
+  if (!b) { if (e.target === editor) closeEditor(); return; }   // click backdrop closes
+  const act = b.dataset.act, i = +b.dataset.i;
+  if (act === "save") return saveEditor();
+  if (act === "cancel") return closeEditor();
+  const { names, assign } = readEditor();
+  if (act === "add") names.push("New group");
+  else if (act === "bulk-new") {
+    const target = editor.querySelector("#ed-bulk-group")?.value;
+    if (target) for (const h of Object.keys(assign)) if (isNewGroup(assign[h])) assign[h] = target;
+  }
+  else if (act === "del") names.splice(i, 1);
+  else if (act === "up" && i > 0) [names[i - 1], names[i]] = [names[i], names[i - 1]];
+  else if (act === "down" && i < names.length - 1) [names[i + 1], names[i]] = [names[i], names[i + 1]];
+  renderEditor(names, assign);
+});
+
+editor.addEventListener("input", e => {
+  if (e.target.id === "ed-search") applyEditorFilter();
+});
+
+editBtn.addEventListener("click", openEditor);
+
+search.addEventListener("input", e => applyFilter(e.target.value));
+
+refreshBtn.addEventListener("click", refresh);
+
+main.addEventListener("click", e => {
+  const favorite = e.target.closest("[data-favorite-host]");
+  if (favorite) {
+    const favorites = loadFavorites();
+    const host = favorite.dataset.favoriteHost;
+    if (favorites.has(host)) favorites.delete(host);
+    else favorites.add(host);
+    saveFavorites(favorites);
+    render(layout.groups, currentSvc);
+    applyFilter(search.value);
+    checkAll();
+    return;
+  }
+  const toggle = e.target.closest(".section-toggle");
+  if (!toggle) return;
+  const section = toggle.closest("section");
+  const collapsed = !section.classList.contains("collapsed");
+  section.classList.toggle("collapsed", collapsed);
+  toggle.textContent = collapsed ? "›" : "⌄";
+  toggle.title = collapsed ? "Expand group" : "Collapse group";
+  toggle.setAttribute("aria-label", `${collapsed ? "Expand" : "Collapse"} ${section.dataset.group}`);
+});
+
+categoryNav.addEventListener("click", e => {
+  const button = e.target.closest("[data-group-target]");
+  if (!button) return;
+  const section = document.getElementById(button.dataset.groupTarget);
+  if (!section) return;
+  categoryNav.querySelectorAll(".category-btn").forEach(item => item.classList.toggle("active", item === button));
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.querySelectorAll("[data-status-filter]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    statusFilter = btn.dataset.statusFilter;
+    document.querySelectorAll("[data-status-filter]").forEach(b => b.classList.toggle("active", b === btn));
+    applyFilter(search.value);
+    updateSummary();
+  });
+});
+
+// ---- sticky offsets -------------------------------------------------------
+// The header and the group toolbar are both sticky, stacked. The toolbar's
+// `top` has to equal the header's RENDERED height, which is content-driven and
+// fractional (77px wide, 127.69px at 900px, 0 on mobile where the header stops
+// being sticky) — any hardcoded number leaves a strip of scrolled content
+// showing through the gap. Measure instead, and publish to CSS.
+const appHeader = document.querySelector("header.app-header");
+function syncStickyOffsets() {
+  // Only a sticky header displaces the toolbar; below 600px it scrolls away.
+  // floor, not ceil: rounding down overlaps the bars by a sub-pixel, which is
+  // invisible. Rounding up leaves a fractional gap that renders as a hairline
+  // of scrolling content on some device pixel ratios.
+  const headerH = getComputedStyle(appHeader).position === "sticky"
+    ? Math.floor(appHeader.getBoundingClientRect().height)
+    : 0;
+  const toplineH = Math.ceil(document.querySelector(".topline").getBoundingClientRect().height);
+  const root = document.documentElement.style;
+  root.setProperty("--header-h", headerH + "px");
+  root.setProperty("--sticky-h", (headerH + toplineH) + "px");   // for scroll-margin
+}
+new ResizeObserver(syncStickyOffsets).observe(appHeader);
+new ResizeObserver(syncStickyOffsets).observe(document.querySelector(".topline"));
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !editor.classList.contains("hidden")) { closeEditor(); return; }
+  if (e.key === "Escape" && powerEl.classList.contains("open")) { setPowerOpen(false); return; }
+  if (e.key === "/" && document.activeElement !== search) {
+    e.preventDefault();
+    search.focus();
+    search.select();
+  } else if (e.key === "Escape" && document.activeElement === search) {
+    search.value = "";
+    applyFilter("");
+    search.blur();
+  }
+});
+
+localStorage.removeItem("dash-view");   // drop the removed view-mode preference
+syncStickyOffsets();
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>

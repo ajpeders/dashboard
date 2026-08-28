@@ -1,0 +1,21 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sanity-check static site (and power sidecar when present)
+        run: |
+          test -f index.html
+          test -f default.conf
+          # dashboard-v2.css is <link>ed by index.html and mounted by compose;
+          # if it goes missing the whole v2 shell renders unstyled.
+          test -f dashboard-v2.css
+          grep -q 'dashboard-v2.css' docker-compose.yml
+          if [ -d power ]; then python3 -m compileall -q power; fi
+          # compileall skips extensionless files, so name the host scripts.
+          python3 -m py_compile bin/dashboard-icons bin/dashboard-meta
